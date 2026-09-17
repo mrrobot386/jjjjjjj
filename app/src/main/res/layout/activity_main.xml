@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient_mesh"
+    android:keepScreenOn="true">
+
+    <!-- Red Overlay for Active State -->
+    <View
+        android:id="@+id/redOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.0"
+        android:background="#FF1744"
+        android:clickable="false"
+        android:focusable="false" />
+
+    <!-- Top Bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="44dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp">
+
+        <!-- Left: Battery & RAM -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="4dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_battery" />
+
+                <TextView
+                    android:id="@+id/batteryText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:text="BAT 95%"
+                    android:textColor="#FF1744"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/ramText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="monospace"
+                android:text="RAM 3.2G"
+                android:textColor="#888888"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Center: Title & Subtitle -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/titleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.25"
+                android:text="MYRA"
+                android:textColor="#FF1744"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/subtitleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.1"
+                android:text="AI COMPANION"
+                android:textColor="#888888"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- Right: Time & Settings -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end|center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/timeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:fontFamily="monospace"
+                android:text="12:00"
+                android:textColor="#FF1744"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/settingsBtn"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:src="@drawable/ic_settings" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Center Section: Orb, Waveform, Status -->
+    <LinearLayout
+        android:id="@+id/centerSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="90dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:layout_gravity="center_horizontal">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_orb_glow" />
+
+            <com.myra.assistant.ui.main.OrbAnimationView
+                android:id="@+id/orbView"
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_gravity="center" />
+        </FrameLayout>
+
+        <com.myra.assistant.ui.main.WaveformView
+            android:id="@+id/waveformView"
+            android:layout_width="200dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="sans-serif"
+            android:text="Tap karke bolo 💬"
+            android:textColor="#888888"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Bottom Section: Chat & Mic -->
+    <LinearLayout
+        android:id="@+id/bottomSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:paddingBottom="24dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chatRecycler"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginBottom="12dp"
+            android:clipToPadding="false"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/micButton"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_mic_button"
+                android:contentDescription="Microphone"
+                android:elevation="6dp"
+                android:src="@drawable/ic_mic_off" />
+
+            <TextView
+                android:id="@+id/micHintText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="sans-serif"
+                android:text="Long press to stop"
+                android:textColor="#555555"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>

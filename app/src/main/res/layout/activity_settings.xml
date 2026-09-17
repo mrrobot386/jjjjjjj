@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient_mesh"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="36dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="40dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/backBtn"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back"
+                android:src="@drawable/ic_close" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.1"
+                android:text="MYRA SETTINGS"
+                android:textColor="#FF1744"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <!-- API Key Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="1. GEMINI API KEY"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif"
+                    android:text="Live WebSocket BidiGenerateContent requires a Gemini API key."
+                    android:textColor="#888888"
+                    android:textSize="11sp" />
+
+                <EditText
+                    android:id="@+id/apiKeyInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input_field"
+                    android:fontFamily="monospace"
+                    android:hint="Enter your Gemini API key"
+                    android:inputType="textPassword"
+                    android:textColor="#EEEEEE"
+                    android:textColorHint="#555555"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- User Name Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="2. YOUR NAME"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif"
+                    android:text="MYRA will address you by this name in conversations."
+                    android:textColor="#888888"
+                    android:textSize="11sp" />
+
+                <EditText
+                    android:id="@+id/userNameInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_input_field"
+                    android:fontFamily="sans-serif"
+                    android:hint="e.g. Rahul, Boss, Sir"
+                    android:inputType="textPersonName"
+                    android:textColor="#EEEEEE"
+                    android:textColorHint="#555555"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Model & Voice Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="3. AI MODEL"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/modelSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input_field"
+                    android:popupBackground="#111111" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="4. VOICE SELECTION"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/voiceSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input_field"
+                    android:popupBackground="#111111" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Personality Mode Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="5. PERSONALITY MODE"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <RadioGroup
+                    android:id="@+id/personalityRadioGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp">
+
+                    <RadioButton
+                        android:id="@+id/radioGf"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="#FF1744"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="GF Mode 💖 (Warm Hinglish, caring, expressive)"
+                        android:textColor="#EEEEEE"
+                        android:textSize="13sp" />
+
+                    <RadioButton
+                        android:id="@+id/radioProfessional"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:buttonTint="#FF1744"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Professional Mode 💼 (Formal English, precise)"
+                        android:textColor="#EEEEEE"
+                        android:textSize="13sp" />
+
+                    <RadioButton
+                        android:id="@+id/radioAssistant"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:buttonTint="#FF1744"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Assistant Mode 🤖 (Balanced, friendly Hinglish/English)"
+                        android:textColor="#EEEEEE"
+                        android:textSize="13sp" />
+                </RadioGroup>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Prime Contacts Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="6. PRIME CONTACTS"
+                        android:textColor="#FF1744"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/addPrimeContactBtn"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ ADD CONTACT"
+                        android:textColor="#FF1744"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:text="Speak: 'mere close friend ko call karo' or 'meri jaan ko msg karo'"
+                    android:textColor="#888888"
+                    android:textSize="11sp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/primeContactsRecycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:nestedScrollingEnabled="false" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Accessibility Service Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/accessibilityCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="7. ACCESSIBILITY SERVICE"
+                    android:textColor="#FF1744"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif"
+                    android:text="Enables hands-free actions: open/close apps, auto-tap, and scrolling."
+                    android:textColor="#888888"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/accessibilityStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Status: Checking..."
+                    android:textColor="#00E676"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Save Button -->
+        <Button
+            android:id="@+id/saveSettingsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_save_button"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.1"
+            android:text="SAVE SETTINGS"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            app:backgroundTint="@null" />
+
+    </LinearLayout>
+</ScrollView>

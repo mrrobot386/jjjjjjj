@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#111111"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-black"
+        android:text="ADD PRIME CONTACT"
+        android:textColor="#FF1744"
+        android:textSize="16sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="sans-serif"
+        android:text="Used for voice triggers like 'mere close friend ko call karo'"
+        android:textColor="#888888"
+        android:textSize="12sp" />
+
+    <EditText
+        android:id="@+id/dialogNameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_input_field"
+        android:fontFamily="sans-serif"
+        android:hint="Contact Name (e.g. Priya, Mom)"
+        android:inputType="textPersonName"
+        android:textColor="#EEEEEE"
+        android:textColorHint="#555555"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/dialogNumberInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input_field"
+        android:fontFamily="sans-serif"
+        android:hint="Phone Number (e.g. +919876543210)"
+        android:inputType="phone"
+        android:textColor="#EEEEEE"
+        android:textColorHint="#555555"
+        android:textSize="14sp" />
+</LinearLayout>

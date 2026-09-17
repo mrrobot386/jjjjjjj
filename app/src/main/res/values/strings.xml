@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">MYRA</string>
+    <string name="accessibility_service_description">MYRA Assistant accessibility service enables hands-free voice automation, allowing MYRA to navigate apps, tap buttons, scroll, and type per voice commands.</string>
+    <string name="app_subtitle">AI COMPANION</string>
+    <string name="tap_to_speak">Tap karke bolo 💬</string>
+    <string name="listening_status">Sun rahi hoon...</string>
+    <string name="speaking_status">Bol rahi hoon...</string>
+    <string name="thinking_status">Soch rahi hoon...</string>
+    <string name="connecting_status">Connecting...</string>
+    <string name="long_press_hint">Long press to stop</string>
+    <string name="settings_title">MYRA Settings</string>
+</resources>
