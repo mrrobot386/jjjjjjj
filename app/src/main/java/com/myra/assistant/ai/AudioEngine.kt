@@ -2,227 +2,850 @@ package com.myra.assistant.ai
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.AudioTrack
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.sqrt
 
-class AudioEngine(private val context: Context) {
+/**
+ * MYRA AudioEngine
+ *
+ * Microphone:
+ *  - 16kHz
+ *  - Mono
+ *  - PCM16
+ *
+ * Speaker:
+ *  - 24kHz
+ *  - Mono
+ *  - PCM16
+ *
+ * Flow:
+ *
+ * MIC
+ *   ↓
+ * AudioRecord
+ *   ↓
+ * GeminiLiveClient
+ *   ↓
+ * Gemini
+ *   ↓
+ * AudioEngine.queueAudio()
+ *   ↓
+ * AudioOutputManager
+ *   ↓
+ * SPEAKER 🔊
+ */
+class AudioEngine(
+    private val context: Context
+) {
 
     companion object {
+
         private const val TAG = "AudioEngine"
+
         const val MIC_SAMPLE_RATE = 16000
+
         const val SPEAKER_SAMPLE_RATE = 24000
+
         const val CHUNK_SIZE_BYTES = 1024
     }
 
+    // ---------------------------------------------------------
+    // CALLBACKS
+    // ---------------------------------------------------------
+
     var onMicDataAvailable: ((ByteArray) -> Unit)? = null
+
     var onAmplitudeChanged: ((Float) -> Unit)? = null
+
     var onSpeakingStarted: (() -> Unit)? = null
+
     var onSpeakingStopped: (() -> Unit)? = null
 
-    private var audioRecord: AudioRecord? = null
-    private var audioTrack: AudioTrack? = null
+    var onError: ((String) -> Unit)? = null
 
-    private val isRecording = AtomicBoolean(false)
-    private val isPlaying = AtomicBoolean(false)
-    private val isMuted = AtomicBoolean(false)
-    private val isSpeaking = AtomicBoolean(false)
+    // ---------------------------------------------------------
+    // MICROPHONE
+    // ---------------------------------------------------------
 
-    private val playbackQueue = LinkedBlockingQueue<ByteArray>()
+    private var micRecord: AudioRecord? = null
+
     private var recordingThread: Thread? = null
-    private var playbackThread: Thread? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+
+    // ---------------------------------------------------------
+    // AUDIO OUTPUT
+    // ---------------------------------------------------------
+
+    private val outputManager =
+        AudioOutputManager(context)
+
+    // ---------------------------------------------------------
+    // STATES
+    // ---------------------------------------------------------
+
+    private val isRecording =
+        AtomicBoolean(false)
+
+    private val isMuted =
+        AtomicBoolean(false)
+
+    private val mainHandler =
+        Handler(Looper.getMainLooper())
+
+    private var loggedFirstPcm = false
+
+    // ---------------------------------------------------------
+    // INIT
+    // ---------------------------------------------------------
+
+    init {
+
+        outputManager.onSpeakingStarted = {
+
+            mainHandler.post {
+
+                Log.d(
+                    TAG,
+                    "MYRA_SPEAKING_STARTED"
+                )
+
+                onSpeakingStarted?.invoke()
+            }
+        }
+
+        outputManager.onSpeakingStopped = {
+
+            mainHandler.post {
+
+                Log.d(
+                    TAG,
+                    "MYRA_SPEAKING_STOPPED"
+                )
+
+                onSpeakingStopped?.invoke()
+            }
+        }
+
+        outputManager.onAmplitudeChanged = { amp ->
+
+            mainHandler.post {
+
+                onAmplitudeChanged?.invoke(
+                    amp
+                )
+            }
+        }
+
+        outputManager.onError = { error ->
+
+            mainHandler.post {
+
+                Log.e(
+                    TAG,
+                    "AUDIO_OUTPUT_ERROR: $error"
+                )
+
+                onError?.invoke(error)
+            }
+        }
+    }
+
+    // =========================================================
+    // MICROPHONE
+    // =========================================================
 
     @SuppressLint("MissingPermission")
     fun startRecording() {
-        if (isRecording.get()) return
 
-        val minBufSize = AudioRecord.getMinBufferSize(
-            MIC_SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        val bufferSize = maxOf(minBufSize, CHUNK_SIZE_BYTES * 2)
+        if (
+            isRecording.get()
+        ) {
 
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                MIC_SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
+            Log.d(
+                TAG,
+                "MIC_ALREADY_RUNNING"
             )
 
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioRecord initialization failed")
+            return
+        }
+
+        val minBufferSize =
+            AudioRecord.getMinBufferSize(
+                MIC_SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+
+        if (
+            minBufferSize <= 0
+        ) {
+
+            val error =
+                "MIC_ERROR: Invalid AudioRecord buffer size"
+
+            Log.e(
+                TAG,
+                error
+            )
+
+            mainHandler.post {
+
+                onError?.invoke(
+                    error
+                )
+            }
+
+            return
+        }
+
+        val bufferSize =
+            maxOf(
+                minBufferSize,
+                CHUNK_SIZE_BYTES * 4
+            )
+
+        try {
+
+            // -------------------------------------------------
+            // TRY VOICE_RECOGNITION
+            // -------------------------------------------------
+
+            micRecord =
+                AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                    MIC_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
+
+            // -------------------------------------------------
+            // FALLBACK TO MIC
+            // -------------------------------------------------
+
+            if (
+                micRecord?.state !=
+                AudioRecord.STATE_INITIALIZED
+            ) {
+
+                Log.w(
+                    TAG,
+                    "VOICE_RECOGNITION failed. Using MIC fallback."
+                )
+
+                try {
+
+                    micRecord?.release()
+
+                } catch (_: Exception) {
+                }
+
+                micRecord =
+                    AudioRecord(
+                        MediaRecorder.AudioSource.MIC,
+                        MIC_SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+            }
+
+            // -------------------------------------------------
+            // FINAL CHECK
+            // -------------------------------------------------
+
+            if (
+                micRecord?.state !=
+                AudioRecord.STATE_INITIALIZED
+            ) {
+
+                val error =
+                    "MIC_ERROR: AudioRecord initialization failed"
+
+                Log.e(
+                    TAG,
+                    error
+                )
+
+                mainHandler.post {
+
+                    onError?.invoke(
+                        error
+                    )
+                }
+
                 return
             }
 
-            audioRecord?.startRecording()
+            // -------------------------------------------------
+            // START MIC
+            // -------------------------------------------------
+
+            micRecord?.startRecording()
+
+            if (
+                micRecord?.recordingState !=
+                AudioRecord.RECORDSTATE_RECORDING
+            ) {
+
+                val error =
+                    "MIC_ERROR: AudioRecord failed to start"
+
+                Log.e(
+                    TAG,
+                    error
+                )
+
+                mainHandler.post {
+
+                    onError?.invoke(
+                        error
+                    )
+                }
+
+                return
+            }
+
             isRecording.set(true)
 
-            recordingThread = Thread({
-                val buffer = ByteArray(CHUNK_SIZE_BYTES)
-                while (isRecording.get()) {
-                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                    if (read > 0) {
-                        val rms = calculateRms(buffer, read)
-                        mainHandler.post { onAmplitudeChanged?.invoke(rms) }
+            loggedFirstPcm = false
 
-                        // Echo suppression: Don't send mic audio while MYRA is speaking or muted
-                        if (!isMuted.get() && !isSpeaking.get()) {
-                            val chunk = buffer.copyOf(read)
-                            onMicDataAvailable?.invoke(chunk)
-                        }
-                    }
-                }
-            }, "AudioRecordThread").apply { start() }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting AudioRecord", e)
-        }
-    }
-
-    fun startPlayback() {
-        if (isPlaying.get()) return
-
-        val minBufSize = AudioTrack.getMinBufferSize(
-            SPEAKER_SAMPLE_RATE,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        val bufferSize = maxOf(minBufSize, 4096)
-
-        try {
-            val attributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
-
-            val format = AudioFormat.Builder()
-                .setSampleRate(SPEAKER_SAMPLE_RATE)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .build()
-
-            audioTrack = AudioTrack(
-                attributes,
-                format,
-                bufferSize,
-                AudioTrack.MODE_STREAM,
-                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
+            Log.d(
+                TAG,
+                "MIC_STARTED: 16kHz MONO PCM16"
             )
 
-            audioTrack?.play()
-            isPlaying.set(true)
+            // -------------------------------------------------
+            // RECORDING THREAD
+            // -------------------------------------------------
 
-            playbackThread = Thread({
-                var wasSpeaking = false
-                while (isPlaying.get()) {
-                    val chunk = playbackQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
-                    if (chunk != null && chunk.isNotEmpty()) {
-                        if (!wasSpeaking) {
-                            wasSpeaking = true
-                            isSpeaking.set(true)
-                            mainHandler.post { onSpeakingStarted?.invoke() }
-                        }
+            recordingThread =
+                Thread({
 
-                        // Calculate playback amplitude for orb animation
-                        val rms = calculateRms(chunk, chunk.size)
-                        mainHandler.post { onAmplitudeChanged?.invoke(rms) }
+                    val buffer =
+                        ByteArray(
+                            CHUNK_SIZE_BYTES
+                        )
 
-                        audioTrack?.write(chunk, 0, chunk.size)
-                    } else {
-                        if (wasSpeaking && playbackQueue.isEmpty()) {
-                            wasSpeaking = false
-                            isSpeaking.set(false)
-                            mainHandler.post { onSpeakingStopped?.invoke() }
+                    var sentCount = 0
+
+                    while (
+                        isRecording.get()
+                    ) {
+
+                        try {
+
+                            val read =
+                                micRecord?.read(
+                                    buffer,
+                                    0,
+                                    buffer.size
+                                )
+                                    ?: -1
+
+                            if (
+                                read <= 0
+                            ) {
+
+                                continue
+                            }
+
+                            // ---------------------------------
+                            // AUDIO SIGNAL
+                            // ---------------------------------
+
+                            val hasSignal =
+                                hasAudioSignal(
+                                    buffer,
+                                    read
+                                )
+
+                            val rms =
+                                calculateRms(
+                                    buffer,
+                                    read
+                                )
+
+                            // ---------------------------------
+                            // UI AMPLITUDE
+                            // ---------------------------------
+
+                            if (
+                                !outputManager.isSpeaking()
+                            ) {
+
+                                mainHandler.post {
+
+                                    onAmplitudeChanged
+                                        ?.invoke(
+                                            rms
+                                        )
+                                }
+                            }
+
+                            // ---------------------------------
+                            // FIRST PCM LOG
+                            // ---------------------------------
+
+                            if (
+                                hasSignal &&
+                                !loggedFirstPcm
+                            ) {
+
+                                loggedFirstPcm = true
+
+                                Log.d(
+                                    TAG,
+                                    "MIC_PCM_CAPTURED: " +
+                                            "valid audio detected " +
+                                            "rms=$rms"
+                                )
+                            }
+
+                            // ---------------------------------
+                            // INTERRUPTION
+                            // ---------------------------------
+
+                            if (
+                                outputManager.isSpeaking() &&
+                                rms > 0.15f
+                            ) {
+
+                                Log.d(
+                                    TAG,
+                                    "MYRA_INTERRUPTION_DETECTED"
+                                )
+
+                                mainHandler.post {
+
+                                    interruptPlayback()
+                                }
+                            }
+
+                            // ---------------------------------
+                            // SEND TO GEMINI
+                            // ---------------------------------
+
+                            if (
+                                !isMuted.get() &&
+                                !outputManager.isSpeaking()
+                            ) {
+
+                                val chunk =
+                                    buffer.copyOf(
+                                        read
+                                    )
+
+                                sentCount++
+
+                                if (
+                                    sentCount % 20 == 1
+                                ) {
+
+                                    Log.d(
+                                        TAG,
+                                        "MIC_AUDIO_SENT " +
+                                                "chunk=$sentCount " +
+                                                "bytes=${chunk.size}"
+                                    )
+                                }
+
+                                try {
+
+                                    onMicDataAvailable
+                                        ?.invoke(
+                                            chunk
+                                        )
+
+                                } catch (
+                                    e: Exception
+                                ) {
+
+                                    Log.e(
+                                        TAG,
+                                        "MIC_CALLBACK_ERROR",
+                                        e
+                                    )
+                                }
+                            }
+
+                        } catch (
+                            e: Exception
+                        ) {
+
+                            if (
+                                isRecording.get()
+                            ) {
+
+                                Log.e(
+                                    TAG,
+                                    "MIC_RECORDING_LOOP_ERROR",
+                                    e
+                                )
+                            }
                         }
                     }
-                }
-            }, "AudioTrackThread").apply { start() }
+
+                }, "MYRA-AudioRecordThread")
+
+            recordingThread?.start()
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting AudioTrack", e)
+
+            val error =
+                "MIC_ERROR starting AudioRecord: ${e.message}"
+
+            Log.e(
+                TAG,
+                error,
+                e
+            )
+
+            isRecording.set(false)
+
+            mainHandler.post {
+
+                onError?.invoke(
+                    error
+                )
+            }
         }
     }
 
-    fun queueAudio(pcmData: ByteArray) {
-        if (pcmData.isNotEmpty()) {
-            playbackQueue.offer(pcmData)
+    // =========================================================
+    // PLAYBACK
+    // =========================================================
+
+    /**
+     * Start speaker manually.
+     *
+     * MainActivity can call this during setup.
+     */
+    fun startPlayback() {
+
+        try {
+
+            Log.d(
+                TAG,
+                "AUDIO_PLAYBACK_START_REQUEST"
+            )
+
+            outputManager.start()
+
+        } catch (e: Exception) {
+
+            Log.e(
+                TAG,
+                "AUDIO_PLAYBACK_START_ERROR",
+                e
+            )
+
+            mainHandler.post {
+
+                onError?.invoke(
+                    "Audio playback start failed: ${e.message}"
+                )
+            }
         }
     }
+
+    /**
+     * Gemini audio arrives here.
+     *
+     * IMPORTANT FIX:
+     *
+     * Do NOT assume startPlayback() was called earlier.
+     * Whenever Gemini sends audio, make sure the output
+     * manager is running before queueing the PCM.
+     */
+    fun queueAudio(
+        pcmData: ByteArray
+    ) {
+
+        if (
+            pcmData.isEmpty()
+        ) {
+
+            Log.w(
+                TAG,
+                "GEMINI_AUDIO_EMPTY"
+            )
+
+            return
+        }
+
+        Log.d(
+            TAG,
+            "GEMINI_AUDIO_RECEIVED -> PLAYBACK " +
+                    "${pcmData.size} bytes"
+        )
+
+        try {
+
+            // ---------------------------------------------
+            // ENSURE AUDIO OUTPUT IS STARTED
+            // ---------------------------------------------
+
+            outputManager.start()
+
+            // ---------------------------------------------
+            // QUEUE GEMINI PCM
+            // ---------------------------------------------
+
+            outputManager.queueAudio(
+                pcmData.copyOf()
+            )
+
+            Log.d(
+                TAG,
+                "GEMINI_AUDIO_QUEUED_SUCCESS"
+            )
+
+        } catch (e: Exception) {
+
+            Log.e(
+                TAG,
+                "GEMINI_AUDIO_PLAYBACK_ERROR",
+                e
+            )
+
+            mainHandler.post {
+
+                onError?.invoke(
+                    "Gemini audio playback failed: ${e.message}"
+                )
+            }
+        }
+    }
+
+    // =========================================================
+    // INTERRUPT
+    // =========================================================
 
     fun interruptPlayback() {
-        playbackQueue.clear()
+
         try {
-            audioTrack?.pause()
-            audioTrack?.flush()
-            audioTrack?.play()
+
+            Log.d(
+                TAG,
+                "MYRA_PLAYBACK_INTERRUPT"
+            )
+
+            outputManager.interruptPlayback()
+
         } catch (e: Exception) {
-            Log.w(TAG, "Error flushing AudioTrack", e)
-        }
-        if (isSpeaking.get()) {
-            isSpeaking.set(false)
-            mainHandler.post { onSpeakingStopped?.invoke() }
+
+            Log.e(
+                TAG,
+                "PLAYBACK_INTERRUPT_ERROR",
+                e
+            )
         }
     }
 
-    fun setMuted(muted: Boolean) {
-        isMuted.set(muted)
+    // =========================================================
+    // MUTE
+    // =========================================================
+
+    fun setMuted(
+        muted: Boolean
+    ) {
+
+        isMuted.set(
+            muted
+        )
+
+        Log.d(
+            TAG,
+            "MIC_MUTED=$muted"
+        )
     }
 
-    fun isMuted(): Boolean = isMuted.get()
-    fun isSpeaking(): Boolean = isSpeaking.get()
+    fun isMuted(): Boolean {
 
-    private fun calculateRms(buffer: ByteArray, length: Int): Float {
-        if (length < 2) return 0f
-        var sum = 0.0
-        val sampleCount = length / 2
-        for (i in 0 until length - 1 step 2) {
-            val sample = (buffer[i].toInt() and 0xFF) or (buffer[i + 1].toInt() shl 8)
-            val shortVal = sample.toShort()
-            sum += shortVal * shortVal
+        return isMuted.get()
+    }
+
+    fun isSpeaking(): Boolean {
+
+        return outputManager.isSpeaking()
+    }
+
+    // =========================================================
+    // AUDIO SIGNAL
+    // =========================================================
+
+    private fun hasAudioSignal(
+        buffer: ByteArray,
+        length: Int
+    ): Boolean {
+
+        if (
+            length <= 0
+        ) {
+            return false
         }
-        val mean = sum / sampleCount
-        val rms = sqrt(mean).toFloat()
-        // Normalize 0..32767 to roughly 0..1
-        val normalized = (rms / 8000f).coerceIn(0f, 1f)
-        return normalized
+
+        for (
+            i in 0 until length
+        ) {
+
+            if (
+                buffer[i] != 0.toByte()
+            ) {
+
+                return true
+            }
+        }
+
+        return false
     }
+
+    // =========================================================
+    // RMS
+    // =========================================================
+
+    private fun calculateRms(
+        buffer: ByteArray,
+        length: Int
+    ): Float {
+
+        if (
+            length < 2
+        ) {
+
+            return 0f
+        }
+
+        var sum =
+            0.0
+
+        val sampleCount =
+            length / 2
+
+        for (
+            i in 0 until length - 1 step 2
+        ) {
+
+            val sample =
+                (buffer[i].toInt() and 0xFF) or
+                        (buffer[i + 1].toInt() shl 8)
+
+            val shortVal =
+                sample.toShort()
+
+            sum +=
+                shortVal.toDouble() *
+                        shortVal.toDouble()
+        }
+
+        if (
+            sampleCount <= 0
+        ) {
+
+            return 0f
+        }
+
+        val mean =
+            sum / sampleCount
+
+        val rms =
+            kotlin.math.sqrt(
+                mean
+            ).toFloat()
+
+        return (
+                rms / 8000f
+                ).coerceIn(
+                    0f,
+                    1f
+                )
+    }
+
+    // =========================================================
+    // RELEASE
+    // =========================================================
 
     fun release() {
+
+        Log.d(
+            TAG,
+            "AUDIO_ENGINE_RELEASE"
+        )
+
         isRecording.set(false)
-        isPlaying.set(false)
-        playbackQueue.clear()
+
+        loggedFirstPcm = false
+
+        // -----------------------------------------------------
+        // STOP MICROPHONE
+        // -----------------------------------------------------
 
         try {
-            audioRecord?.stop()
-            audioRecord?.release()
+
+            micRecord?.stop()
+
         } catch (e: Exception) {
-            Log.w(TAG, "Error releasing AudioRecord", e)
+
+            Log.w(
+                TAG,
+                "Error stopping microphone",
+                e
+            )
         }
-        audioRecord = null
 
         try {
-            audioTrack?.stop()
-            audioTrack?.release()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error releasing AudioTrack", e)
-        }
-        audioTrack = null
 
-        recordingThread?.interrupt()
-        playbackThread?.interrupt()
+            micRecord?.release()
+
+        } catch (e: Exception) {
+
+            Log.w(
+                TAG,
+                "Error releasing microphone",
+                e
+            )
+        }
+
+        micRecord = null
+
+        // -----------------------------------------------------
+        // STOP THREAD
+        // -----------------------------------------------------
+
+        try {
+
+            recordingThread?.interrupt()
+
+        } catch (_: Exception) {
+        }
+
         recordingThread = null
-        playbackThread = null
+
+        // -----------------------------------------------------
+        // RELEASE SPEAKER
+        // -----------------------------------------------------
+
+        try {
+
+            outputManager.release()
+
+        } catch (e: Exception) {
+
+            Log.w(
+                TAG,
+                "Error releasing AudioOutputManager",
+                e
+            )
+        }
+
+        Log.d(
+            TAG,
+            "AUDIO_ENGINE_RELEASED"
+        )
     }
 }

@@ -67,6 +67,12 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- Gemini Live WebSocket Real-time Audio Streaming Service -->
+        <service
+            android:name="com.myra.assistant.service.GeminiLiveService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <!-- Call Monitor Service -->
         <service
             android:name="com.myra.assistant.service.CallMonitorService"

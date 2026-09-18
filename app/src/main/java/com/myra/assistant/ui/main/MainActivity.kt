@@ -249,19 +249,48 @@ class MainActivity : AppCompatActivity() {
         audioEngine = AudioEngine(this)
         geminiLive = GeminiLiveClient(this)
 
+        // Track GeminiLiveClient states
+        geminiLive?.onStateChanged = { state ->
+            Log.d(TAG, "MYRA State changed to: $state")
+            when (state) {
+                GeminiLiveClient.SessionState.CONNECTING -> {
+                    statusText.text = "Connecting..."
+                    orbView.setState(OrbAnimationView.OrbState.THINKING)
+                }
+                GeminiLiveClient.SessionState.INITIALIZING -> {
+                    statusText.text = "Initializing..."
+                    orbView.setState(OrbAnimationView.OrbState.THINKING)
+                }
+                GeminiLiveClient.SessionState.READY,
+                GeminiLiveClient.SessionState.LISTENING -> {
+                    statusText.text = getString(R.string.listening_status)
+                    orbView.setState(OrbAnimationView.OrbState.LISTENING)
+                    micButton.setImageResource(R.drawable.ic_mic_on)
+                    animateRedOverlay(false)
+                }
+                GeminiLiveClient.SessionState.SPEAKING -> {
+                    statusText.text = getString(R.string.speaking_status)
+                    orbView.setState(OrbAnimationView.OrbState.SPEAKING)
+                    animateRedOverlay(true)
+                }
+                GeminiLiveClient.SessionState.ERROR,
+                GeminiLiveClient.SessionState.IDLE -> {
+                    statusText.text = "Tap orb to connect"
+                    orbView.setState(OrbAnimationView.OrbState.IDLE)
+                    animateRedOverlay(false)
+                }
+            }
+        }
+
         // Gemini Live Callbacks
         geminiLive?.onConnected = {
-            Log.d(TAG, "Gemini Live connected")
-            statusText.text = "Connected. Initializing..."
+            Log.d(TAG, "GEMINI_CONNECTED: session handshake in progress")
         }
 
         geminiLive?.onSetupComplete = {
-            Log.d(TAG, "Gemini Live setup complete")
-            audioEngine?.startRecording()
+            Log.d(TAG, "GEMINI_READY: starting mic and playback pipelines")
             audioEngine?.startPlayback()
-            micButton.setImageResource(R.drawable.ic_mic_on)
-            orbView.setState(OrbAnimationView.OrbState.LISTENING)
-            statusText.text = "Sun rahi hoon..."
+            audioEngine?.startRecording()
 
             // Send Greeting
             mainHandler.postDelayed({
@@ -270,6 +299,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         geminiLive?.onAudioReceived = { pcmBytes ->
+            Log.d(TAG, "GEMINI_AUDIO_RECEIVED (${pcmBytes.size} bytes), forwarding to AudioOutputManager")
             audioEngine?.queueAudio(pcmBytes)
         }
 
@@ -339,6 +369,11 @@ class MainActivity : AppCompatActivity() {
             orbView.setState(OrbAnimationView.OrbState.LISTENING)
             statusText.text = getString(R.string.listening_status)
             animateRedOverlay(false)
+        }
+
+        audioEngine?.onError = { audioErr ->
+            Log.e(TAG, "AudioEngine error: $audioErr")
+            Toast.makeText(this, audioErr, Toast.LENGTH_SHORT).show()
         }
 
         geminiLive?.connect()
